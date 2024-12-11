@@ -1,4 +1,5 @@
 // app/api/bingo/players/route.ts
+import { players } from '@/utils/players';
 import { NextResponse } from 'next/server';
 
 // TODO: 実際のデータストアに置き換える
@@ -11,13 +12,11 @@ export type PlayerInfo = {
         hasReach: boolean;
     }[];
 }
-export let players: PlayerInfo = {};
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const gameId = searchParams.get('gameId');
 
-    console.log(players)
 
     if (!gameId) {
         return NextResponse.json(

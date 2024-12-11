@@ -1,5 +1,5 @@
+import { players } from "@/utils/players";
 import { NextResponse } from "next/server";
-import { players } from "../players/route";
 import { Subject } from "rxjs";
 class ResetManager {
     private static instance: ResetManager;
