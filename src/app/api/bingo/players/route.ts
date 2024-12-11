@@ -13,6 +13,8 @@ export type PlayerInfo = {
     }[];
 }
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const gameId = searchParams.get('gameId');

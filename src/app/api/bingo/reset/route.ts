@@ -25,6 +25,8 @@ class ResetManager {
     }
 }
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 export async function GET() {
     const encoder = new TextEncoder();
     const manager = ResetManager.getInstance();
