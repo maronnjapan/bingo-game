@@ -13,7 +13,6 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
     request: Request,
-    { params }: { params: { gameId: string } }
 ) {
     const { searchParams } = new URL(request.url);
     const gameId = searchParams.get('gameId');
@@ -71,7 +70,6 @@ export async function GET(
 
 export async function POST(
     request: Request,
-    { params }: { params: { gameId: string } }
 ) {
     const payload = await request.json() as WinnerPayload;
 
