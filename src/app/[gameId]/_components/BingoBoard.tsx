@@ -44,7 +44,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
     const [numbers, setNumbers] = useState<number[]>([]);
     const [bingoCard, setBingoCard] = useState<BingoCard>(generateCard());
     const [currentNumber, setCurrentNumber] = useState<number | null>(null);
-    const [player, setPlayer] = useState<{ id: string, name?: string }>({ id: Math.random().toString(32).substring(2), name: undefined });
+    const [player, setPlayer] = useState<{ id: string, name?: string, hasBingo: boolean }>({ id: Math.random().toString(32).substring(2), name: undefined, hasBingo: false });
     const [isNameEntered, setIsNameEntered] = useState<boolean>(false);
     const [hasWon, setHasWon] = useState<boolean>(false);
 
@@ -57,7 +57,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         }
     };
 
-    const toggleMark = useCallback((newCard: number, player?: { id: string, name?: string }) => {
+    const toggleMark = useCallback((newCard: number, player?: { id: string, name?: string, hasBingo: boolean }) => {
         const cards = bingoCard.map(bc =>
             bc.map(c => ({
                 isMarked: c.number === newCard ? true : c.isMarked,
@@ -89,7 +89,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         });
 
         // ビンゴをチェック
-        if (checkBingo(cards)) {
+        if (checkBingo(cards) && !player?.hasBingo) {
             fetch('/api/bingo/notification', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -146,7 +146,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
                         <input
                             type="text"
                             value={player?.name}
-                            onChange={(e) => setPlayer(prev => ({ id: prev.id, name: e.target.value }))}
+                            onChange={(e) => setPlayer(prev => ({ id: prev.id, name: e.target.value, hasBingo: prev.hasBingo }))}
                             placeholder="プレイヤー名を入力"
                             className="w-full p-2 border rounded text-black"
                             required
