@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BingoCard, BingoCell } from '../admin/_components/BingoDashboard';
 import { PlayerInfo } from '@/app/api/bingo/players/route';
+import { pusherClient } from '@/lib/pusher';
 const generateCard = (): BingoCard => {
     // 各列の数字の範囲を定義
     const ranges = [
@@ -67,7 +68,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         // カードの状態を更新
         setBingoCard(cards);
 
-        const fetchData: PlayerInfo[0][0] = {
+        const fetchData: PlayerInfo = {
             id: player?.id ?? '',
             card: cards,
             hasWon: checkBingo(cards),
@@ -109,31 +110,33 @@ export function BingoBoard({ gameId }: { gameId: string }) {
 
 
     useEffect(() => {
+        if (!isNameEntered) return;
 
-        const eventSource = new EventSource('/api/bingo');
+        const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);
+        const numbersChannel = pusherClient.subscribe('bingo-numbers');
 
-        eventSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.number) {
-                setCurrentNumber(data.number);
-                toggleMark(data.number, player)
-            }
+        // 新しい番号のリスニング
+        numbersChannel.bind('new-number', (data: { number: number }) => {
+            setCurrentNumber(data.number);
+            toggleMark(data.number, player);
+        });
+
+        // ゲームリセットのリスニング
+        gameChannel.bind('game-reset', () => {
+            setNumbers([]);
+            setBingoCard(generateCard());
+            setCurrentNumber(null);
+            setHasWon(false);
+        });
+
+        // コンポーネントのクリーンアップ
+        return () => {
+            gameChannel.unbind_all();
+            numbersChannel.unbind_all();
+            pusherClient.unsubscribe(`bingo-game-${gameId}`);
+            pusherClient.unsubscribe('bingo-numbers');
         };
-
-        const eventRestSource = new EventSource('/api/bingo/reset');
-
-        eventRestSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.isReset === true) {
-                setNumbers([])
-                setBingoCard([])
-                setCurrentNumber(null)
-            }
-
-        };
-
-        return () => eventSource.close();
-    }, [bingoCard, player]);
+    }, [gameId, isNameEntered, player, toggleMark]);
 
     return (
         <div className="max-w-xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { Collapse } from './Collapse';
+import { pusherClient } from '@/lib/pusher';
 
 export interface BingoCell {
     number: number;
@@ -27,24 +28,8 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
     const [showName, setShowName] = useState('')
 
     useEffect(() => {
-        const eventSource = new EventSource(`/api/bingo/notification?gameId=${1}`);
-
-        eventSource.onmessage = (event) => {
-            const { player } = JSON.parse(event.data);
-            setBingoPlayers(prev => [...prev.filter(p => p.id !== player.id), player]);
-        };
-
-        return () => eventSource.close();
-    }, []);
-
-    useEffect(() => {
-        if (bingoPlayers.length > 0) {
-            alert(bingoPlayers[bingoPlayers.length - 1].name + 'さんがビンゴになりました')
-        }
-    }, [bingoPlayers.length])
-
-    useEffect(() => {
-        const fetchPlayers = async () => {
+        // 初期プレイヤーデータの取得
+        const fetchInitialPlayers = async () => {
             try {
                 const response = await fetch(`/api/bingo/players?gameId=${gameId}`);
                 const data = await response.json();
@@ -54,14 +39,47 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
             }
         };
 
-        // 初回取得
-        fetchPlayers();
+        fetchInitialPlayers();
 
-        // 5秒ごとに更新
-        const interval = setInterval(fetchPlayers, 5000);
+        // Pusherチャンネルの購読
+        const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);
+        const numbersChannel = pusherClient.subscribe('bingo-numbers');
 
-        return () => clearInterval(interval);
-    }, []);
+        // ビンゴ達成通知のリスニング
+        gameChannel.bind('bingo-achieved', (data: { player: { id: string, name: string } }) => {
+            setBingoPlayers(prev => [...prev.filter(p => p.id !== data.player.id), data.player]);
+            // アラート表示
+            alert(`${data.player.name}さんがビンゴになりました！`);
+        });
+
+        // プレイヤー更新のリスニング
+        gameChannel.bind('players-updated', (data: { players: Player[] }) => {
+            setPlayers(data.players);
+        });
+
+        // 新しい番号のリスニング
+        numbersChannel.bind('new-number', (data: { number: number }) => {
+            setNumbers(prev => [...prev, data.number]);
+            setCurrentNumber(data.number);
+            setDrawnNumbers(prev => [...prev, data.number]);
+        });
+
+        // ゲームリセットのリスニング
+        gameChannel.bind('game-reset', () => {
+            setDrawnNumbers([]);
+            setNumbers([]);
+            setCurrentNumber(null);
+            setBingoPlayers([]);
+            setPlayers([]);
+        });
+
+        return () => {
+            gameChannel.unbind_all();
+            numbersChannel.unbind_all();
+            pusherClient.unsubscribe(`bingo-game-${gameId}`);
+            pusherClient.unsubscribe('bingo-numbers');
+        };
+    }, [gameId]);
 
     const generateNumber = (): number | null => {
         const availableNumbers = Array.from({ length: 75 }, (_, i) => i + 1)

@@ -1,3 +1,3 @@
 import { PlayerInfo } from "@/app/api/bingo/players/route";
 
-export let players: PlayerInfo = {};
+export let players: { [gameId: string]: PlayerInfo[] } = {};

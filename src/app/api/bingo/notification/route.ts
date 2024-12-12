@@ -1,87 +1,58 @@
-import { NextResponse } from 'next/server';
-import { Subject } from 'rxjs';
+import { pusherServer } from '@/lib/pusher';
+import { NextRequest, NextResponse } from 'next/server';
 
-type WinnerPayload = {
-    player: { id: string, name: string };
-    gameId: string;
-};
-
-const winnerSubjects = new Map<string, Subject<WinnerPayload>>();
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-export async function GET(
-    request: Request,
-) {
-    const { searchParams } = new URL(request.url);
+export async function GET(request: NextRequest) {
+    const searchParams = request.nextUrl.searchParams;
     const gameId = searchParams.get('gameId');
+
     if (!gameId) {
         return NextResponse.json({ error: '誤ったurl' }, { status: 400 });
     }
 
-    if (!winnerSubjects.has(gameId)) {
-        winnerSubjects.set(gameId, new Subject<WinnerPayload>());
+    try {
+        // Pusherのチャンネル情報を取得
+        const channelInfo = await pusherServer.get({
+            path: `/channels/bingo-game-${gameId}`,
+            params: {}
+        });
+
+        return NextResponse.json({
+            channel: channelInfo,
+            gameId
+        });
+    } catch (error) {
+        console.error('Error fetching channel info:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
     }
-
-    const encoder = new TextEncoder();
-    let closed = false;
-
-    const stream = new ReadableStream({
-        start: async (controller) => {
-            const push = (data: WinnerPayload) => {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-            };
-
-            const subscription = winnerSubjects.get(gameId)!.subscribe((payload) => {
-                if (!closed) {
-                    push(payload);
-                }
-            });
-
-            // Keep-alive ping to maintain connection
-            const pingInterval = setInterval(() => {
-                if (!closed) {
-                    controller.enqueue(encoder.encode(`: ping\n\n`));
-                }
-            }, 30000);
-
-            // Wait until the connection is closed
-            while (!closed) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            clearInterval(pingInterval);
-            subscription.unsubscribe();
-        },
-        cancel() {
-            closed = true;
-        },
-    });
-
-    return new Response(stream, {
-        headers: {
-            'Content-Type': 'text/event-stream; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            'Connection': 'keep-alive',
-        },
-    });
 }
 
-export async function POST(
-    request: Request,
-) {
-    const payload = await request.json() as WinnerPayload;
+export async function POST(request: NextRequest) {
+    try {
+        const payload = await request.json();
+        const { player, gameId } = payload;
 
-    console.log(payload)
-    if (!payload.gameId || !payload.player.id || !payload.player.name) {
-        return NextResponse.json({ error: '不正なペイロード' }, { status: 400 });
+        if (!gameId || !player.id || !player.name) {
+            return NextResponse.json({ error: '不正なペイロード' }, { status: 400 });
+        }
+
+        await pusherServer.trigger(
+            `bingo-game-${gameId}`,
+            'bingo-achieved',
+            { player }
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: 'Bingo notification sent successfully'
+        });
+    } catch (error) {
+        console.error('Error in bingo notification:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
     }
-
-    if (!winnerSubjects.has(payload.gameId)) {
-        winnerSubjects.set(payload.gameId, new Subject<WinnerPayload>());
-    }
-
-    winnerSubjects.get(payload.gameId)!.next(payload);
-    return NextResponse.json({ success: true });
 }

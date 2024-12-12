@@ -1,87 +1,61 @@
-import { players } from "@/utils/players";
-import { NextResponse } from "next/server";
-import { Subject } from "rxjs";
-class ResetManager {
-    private static instance: ResetManager;
-    private numberSubject: Subject<boolean>;
+import { pusherServer } from '@/lib/pusher';
+import { players } from '@/utils/players';
+import { NextRequest, NextResponse } from 'next/server';
 
-    private constructor() {
-        this.numberSubject = new Subject<boolean>();
-    }
+export async function POST(request: NextRequest) {
+    try {
+        const { gameId } = await request.json();
 
-    public static getInstance(): ResetManager {
-        if (!ResetManager.instance) {
-            ResetManager.instance = new ResetManager();
+        if (!gameId) {
+            return NextResponse.json(
+                { error: 'Game ID is required' },
+                { status: 400 }
+            );
         }
-        return ResetManager.instance;
-    }
 
-    public subscribe(callback: (isReset: boolean) => void) {
-        return this.numberSubject.subscribe(callback);
-    }
+        // プレイヤーデータのリセット
+        players[gameId] = [];
 
-    public emit(isReset: boolean) {
-        this.numberSubject.next(isReset);
-    }
-}
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export async function GET() {
-    const encoder = new TextEncoder();
-    const manager = ResetManager.getInstance();
-    let closed = false;
-
-    const stream = new ReadableStream({
-        start: async (controller) => {
-            // 接続開始時のメッセージ
-            controller.enqueue(encoder.encode('data: {"connected":true}\n\n'));
-
-            const subscription = manager.subscribe((isReset) => {
-                console.log('subscription')
-                if (!closed) {
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ isReset })}\n\n`)
-                    );
+        // 複数のチャンネルにリセット通知
+        await Promise.all([
+            // ゲーム状態のリセット
+            pusherServer.trigger(
+                `bingo-game-${gameId}`,
+                'game-reset',
+                {
+                    isReset: true,
+                    timestamp: new Date().toISOString()
                 }
-            });
-
-            // エラーハンドリングを追加
-            try {
-                // keepaliveメッセージを定期的に送信
-                while (!closed) {
-                    await new Promise(resolve => setTimeout(resolve, 30000));
-                    if (!closed) {
-                        controller.enqueue(encoder.encode('data: {"ping":true}\n\n'));
-                    }
+            ),
+            // プレイヤー情報のリセット
+            pusherServer.trigger(
+                `bingo-game-${gameId}`,
+                'players-reset',
+                {
+                    isReset: true,
+                    timestamp: new Date().toISOString()
                 }
-            } catch (error) {
-                console.error('Stream error:', error);
-            } finally {
-                subscription.unsubscribe();
-            }
-        },
-        cancel() {
-            closed = true;
-        },
-    });
+            ),
+            // 番号のリセット
+            pusherServer.trigger(
+                'bingo-numbers',
+                'game-reset',
+                {
+                    isReset: true,
+                    timestamp: new Date().toISOString()
+                }
+            )
+        ]);
 
-    return new Response(stream, {
-        headers: {
-            'Content-Type': 'text/event-stream; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            'Connection': 'keep-alive',
-        },
-    });
-}
-export async function POST(request: Request) {
-    const { gameId } = await request.json();
-
-    players[gameId] = []
-
-    const manager = ResetManager.getInstance()
-    manager.emit(true)
-
-
-    return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Game reset successfully'
+        });
+    } catch (error) {
+        console.error('Error in game reset:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
 }
