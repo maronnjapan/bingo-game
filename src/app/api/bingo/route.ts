@@ -1,45 +1,33 @@
-
-// app/api/bingo/reset/route.ts
 import { pusherServer } from '@/lib/pusher';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const { gameId } = await request.json();
+        const { number } = await request.json();
 
-        if (!gameId) {
+        if (typeof number !== 'number' || number < 1 || number > 75) {
             return NextResponse.json(
-                { error: 'Game ID is required' },
+                { error: 'Invalid number' },
                 { status: 400 }
             );
         }
 
-        // リセット通知を送信
-        await pusherServer.trigger(
-            `bingo-game-${gameId}`,
-            'game-reset',
-            {
-                isReset: true,
-                timestamp: new Date().toISOString()
-            }
-        );
-
-        // 番号チャンネルにもリセット通知を送信
         await pusherServer.trigger(
             'bingo-numbers',
-            'game-reset',
+            'new-number',
             {
-                isReset: true,
+                number,
                 timestamp: new Date().toISOString()
             }
         );
 
         return NextResponse.json({
             success: true,
-            message: 'Game reset successfully'
+            message: 'Number announced successfully',
+            number
         });
     } catch (error) {
-        console.error('Error in game reset:', error);
+        console.error('Error in number announcement:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
