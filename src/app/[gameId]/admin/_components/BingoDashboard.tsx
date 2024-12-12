@@ -59,7 +59,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
 
         // 新しい番号のリスニング
         numbersChannel.bind('new-number', (data: { number: number }) => {
-            setNumbers(prev => [...prev, data.number]);
+            setNumbers(prev => Array.from(new Set([...prev, data.number])));
             setCurrentNumber(data.number);
             setDrawnNumbers(prev => [...prev, data.number]);
         });
@@ -101,7 +101,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ number })
             });
-            setNumbers(prev => [...prev, number]);
+            setNumbers(prev => Array.from(new Set([...prev, number])));
             setCurrentNumber(number);
             setDrawnNumbers(prev => [...prev, number]);
         } catch (error) {
