@@ -28,18 +28,31 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
     const [showName, setShowName] = useState('')
 
     useEffect(() => {
-        // 初期プレイヤーデータの取得
-        const fetchInitialPlayers = async () => {
+        const fetchInitialNumber = async () => {
             try {
-                const response = await fetch(`/api/bingo/players?gameId=${gameId}`);
-                const data = await response.json();
-                setPlayers(data.players);
+                const response = await fetch(`/api/bingo?gameId=${gameId}`);
+                const data: { fileData: { [gameId in string]: string[] } } = await response.json();
+                setNumbers(data.fileData[`${gameId}`].map(num => Number(num)));
             } catch (error) {
                 console.error('Error fetching players:', error);
             }
         };
 
-        fetchInitialPlayers();
+        fetchInitialNumber();
+    }, [])
+    useEffect(() => {
+        // // 初期プレイヤーデータの取得
+        // const fetchInitialPlayers = async () => {
+        //     try {
+        //         const response = await fetch(`/api/bingo/players?gameId=${gameId}`);
+        //         const data = await response.json();
+        //         setPlayers(data.players);
+        //     } catch (error) {
+        //         console.error('Error fetching players:', error);
+        //     }
+        // };
+
+        // fetchInitialPlayers();
 
         // Pusherチャンネルの購読
         const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);

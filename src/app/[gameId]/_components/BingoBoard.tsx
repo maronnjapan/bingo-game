@@ -49,76 +49,74 @@ export function BingoBoard({ gameId }: { gameId: string }) {
     const [hasWon, setHasWon] = useState<boolean>(false);
 
 
-    const handleNameSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    // const handleNameSubmit = (e: React.FormEvent) => {
+    //     e.preventDefault();
 
-        if (player?.name?.trim()) {
-            setIsNameEntered(true);
-        }
-    };
+    //     if (player?.name?.trim()) {
+    //         setIsNameEntered(true);
+    //     }
+    // };
 
-    const toggleMark = useCallback((newCard: number, player?: { id: string, name?: string, hasBingo: boolean }) => {
-        const cards = bingoCard.map(bc =>
-            bc.map(c => ({
-                isMarked: c.number === newCard ? true : c.isMarked,
-                number: c.number
-            }))
-        );
+    // const toggleMark = useCallback((newCard: number, player?: { id: string, name?: string, hasBingo: boolean }) => {
+    //     const cards = bingoCard.map(bc =>
+    //         bc.map(c => ({
+    //             isMarked: c.number === newCard ? true : c.isMarked,
+    //             number: c.number
+    //         }))
+    //     );
 
-        // カードの状態を更新
-        setBingoCard(cards);
+    //     // カードの状態を更新
+    //     setBingoCard(cards);
 
-        const fetchData: PlayerInfo = {
-            id: player?.id ?? '',
-            card: cards,
-            hasWon: checkBingo(cards),
-            hasReach: checkReach(cards),
-            name: player?.name ?? ''
-        }
-        fetch('/api/bingo/players', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                player: fetchData,
-                gameId: gameId
-            })
-        }).then(() => {
+    //     const fetchData: PlayerInfo = {
+    //         id: player?.id ?? '',
+    //         card: cards,
+    //         hasWon: checkBingo(cards),
+    //         hasReach: checkReach(cards),
+    //         name: player?.name ?? ''
+    //     }
+    //     fetch('/api/bingo/players', {
+    //         method: 'POST',
+    //         headers: { 'Content-Type': 'application/json' },
+    //         body: JSON.stringify({
+    //             player: fetchData,
+    //             gameId: gameId
+    //         })
+    //     }).then(() => {
 
-        }).catch(() => {
-            alert('エラーが発生しました');
-        });
+    //     }).catch(() => {
+    //         alert('エラーが発生しました');
+    //     });
 
-        // ビンゴをチェック
-        if (checkBingo(cards) && !player?.hasBingo) {
-            fetch('/api/bingo/notification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    player,
-                    gameId: gameId
-                })
-            }).then(() => {
-                setHasWon(true);
-            }).catch(() => {
-                alert('エラーが発生しました');
-            });
-        }
+    //     // ビンゴをチェック
+    //     if (checkBingo(cards) && !player?.hasBingo) {
+    //         fetch('/api/bingo/notification', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({
+    //                 player,
+    //                 gameId: gameId
+    //             })
+    //         }).then(() => {
+    //             setHasWon(true);
+    //         }).catch(() => {
+    //             alert('エラーが発生しました');
+    //         });
+    //     }
 
-        // 出た番号の更新
-        setNumbers(prev => [...prev, newCard]);
-    }, [bingoCard])
+    //     // 出た番号の更新
+    //     setNumbers(prev => [...prev, newCard]);
+    // }, [bingoCard])
 
 
     useEffect(() => {
-        if (!isNameEntered) return;
-
         const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);
         const numbersChannel = pusherClient.subscribe('bingo-numbers');
 
         // 新しい番号のリスニング
         numbersChannel.bind('new-number', (data: { number: number }) => {
             setCurrentNumber(data.number);
-            toggleMark(data.number, player);
+            setNumbers(prev => [...prev, data.number]);
         });
 
         // ゲームリセットのリスニング
@@ -136,10 +134,9 @@ export function BingoBoard({ gameId }: { gameId: string }) {
             pusherClient.unsubscribe(`bingo-game-${gameId}`);
             pusherClient.unsubscribe('bingo-numbers');
         };
-    }, [gameId, isNameEntered, player, toggleMark]);
+    }, [gameId, isNameEntered, player]);
 
     useEffect(() => {
-        // 初期プレイヤーデータの取得
         const fetchInitialNumber = async () => {
             try {
                 const response = await fetch(`/api/bingo?gameId=${gameId}`);
@@ -156,33 +153,16 @@ export function BingoBoard({ gameId }: { gameId: string }) {
 
     return (
         <div className="max-w-xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
-            {
-                !isNameEntered ?
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            value={player?.name}
-                            onChange={(e) => setPlayer(prev => ({ id: prev.id, name: e.target.value, hasBingo: prev.hasBingo }))}
-                            placeholder="プレイヤー名を入力"
-                            className="w-full p-2 border rounded text-black"
-                            required
-                        />
-                        <button className="w-full bg-blue-500 text-white p-2 rounded" onClick={handleNameSubmit}>
-                            参加する
-                        </button>
+            <div className="text-center space-y-6">
+                <h1 className="text-2xl font-bold text-black">ビンゴゲーム</h1>
+
+                {currentNumber && (
+                    <div className="text-4xl font-bold text-blue-600">
+                        現在の番号: {currentNumber}
                     </div>
+                )}
 
-                    :
-                    <div className="text-center space-y-6">
-                        <h1 className="text-2xl font-bold text-black">ビンゴゲーム</h1>
-
-                        {currentNumber && (
-                            <div className="text-4xl font-bold text-blue-600">
-                                現在の番号: {currentNumber}
-                            </div>
-                        )}
-
-                        {hasWon ? (
+                {/* {hasWon ? (
                             <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg">
                                 ビンゴ達成！
                             </div>
@@ -203,22 +183,20 @@ transition-colors duration-200
                                     </div>
                                 ))
                             ))}
-                        </div>}
+                        </div>} */}
 
 
-                        <div className="mt-4">
-                            <h2 className="text-xl mb-2 text-black">出た番号一覧:</h2>
-                            <div className="grid grid-cols-10 gap-1">
-                                {numbers.map((num, index) => (
-                                    <div key={index} className="bg-gray-100 p-1 text-center rounded text-black">
-                                        {num}
-                                    </div>
-                                ))}
+                <div className="mt-4">
+                    <h2 className="text-xl mb-2 text-black">出た番号一覧:</h2>
+                    <div className="grid grid-cols-10 gap-1">
+                        {numbers.map((num, index) => (
+                            <div key={index} className="bg-gray-100 p-1 text-center rounded text-black">
+                                {num}
                             </div>
-                        </div>
+                        ))}
                     </div>
-
-            }
+                </div>
+            </div>
         </div>
     );
 }

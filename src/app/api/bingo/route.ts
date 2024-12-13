@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
     let fileData: { [gameId: string]: string[] } = {}
     if (isExist) {
         const fileStr = fs.readFileSync(filePath, { encoding: 'utf-8' }).toString()
-        fileData = JSON.parse(fileStr)
+        if (fileStr) {
+            fileData = JSON.parse(fileStr)
+        }
     }
 
     return NextResponse.json({
@@ -50,9 +52,8 @@ export async function POST(request: NextRequest) {
 
         if (isExist) {
             const fileStr = fs.readFileSync(filePath, { encoding: 'utf-8' }).toString()
-            console.log(fileStr)
             const fileData = JSON.parse(fileStr)
-            fileData[gameId].push(number)
+            fileData[gameId] = [...(fileData[gameId] ?? []), number]
             fs.writeFileSync(filePath, JSON.stringify(fileData))
         } else {
             const fileData = { [gameId]: [number] }
