@@ -138,6 +138,22 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         };
     }, [gameId, isNameEntered, player, toggleMark]);
 
+    useEffect(() => {
+        // 初期プレイヤーデータの取得
+        const fetchInitialNumber = async () => {
+            try {
+                const response = await fetch(`/api/bingo?gameId=${gameId}`);
+                const data: { fileData: { [gameId in string]: string[] } } = await response.json();
+                console.log(data.fileData)
+                setNumbers(data.fileData[`${gameId}`].map(num => Number(num)));
+            } catch (error) {
+                console.error('Error fetching players:', error);
+            }
+        };
+
+        fetchInitialNumber();
+    }, [])
+
     return (
         <div className="max-w-xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
             {

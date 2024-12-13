@@ -99,7 +99,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
             await fetch('/api/bingo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ number })
+                body: JSON.stringify({ number, gameId })
             });
             setNumbers(prev => Array.from(new Set([...prev, number])));
             setCurrentNumber(number);
