@@ -150,7 +150,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                     </div>
                 )}
 
-                <button
+                {/* <button
                     onClick={() => {
                         announceNumber()
                     }}
@@ -167,6 +167,15 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     マッチポンプ番号を出す
+                </button> */}
+                <button
+                    onClick={async () => {
+                        announceNumber(numbers.length < defaultValues.length ? numbers.length : undefined)
+                    }}
+                    disabled={numbers.length >= defaultValues.length}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    番号を出す
                 </button>
                 <button
                     onClick={async () => {
