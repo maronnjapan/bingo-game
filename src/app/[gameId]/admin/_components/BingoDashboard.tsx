@@ -172,7 +172,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                     onClick={async () => {
                         announceNumber(numbers.length < defaultValues.length ? numbers.length : undefined)
                     }}
-                    disabled={numbers.length >= defaultValues.length}
+                    disabled={numbers.length >= 75}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     番号を出す
@@ -184,7 +184,6 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                         setNumbers([])
                         setCurrentNumber(null)
                     }}
-                    disabled={numbers.length >= 75}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     リセット
