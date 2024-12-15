@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BingoCard, BingoCell } from '../admin/_components/BingoDashboard';
 import { PlayerInfo } from '@/app/api/bingo/players/route';
 import { pusherClient } from '@/lib/pusher';
+import { SpineMachine } from './SpineMachine';
 const generateCard = (): BingoCard => {
     // 各列の数字の範囲を定義
     const ranges = [
@@ -115,8 +116,12 @@ export function BingoBoard({ gameId }: { gameId: string }) {
 
         // 新しい番号のリスニング
         numbersChannel.bind('new-number', (data: { number: number }) => {
-            setCurrentNumber(data.number);
-            setNumbers(prev => [...prev, data.number]);
+            setCurrentNumber(data.number)
+            setTimeout(() => {
+                setNumbers(prev => [...prev, data.number]);
+
+            }, 3500);
+
         });
 
         // ゲームリセットのリスニング
@@ -157,9 +162,10 @@ export function BingoBoard({ gameId }: { gameId: string }) {
                 <h1 className="text-2xl font-bold text-black">ビンゴゲーム</h1>
 
                 {currentNumber && (
-                    <div className="text-4xl font-bold text-blue-600">
-                        現在の番号: {currentNumber}
-                    </div>
+                    // <div className="text-4xl font-bold text-blue-600">
+                    //     現在の番号: {currentNumber}
+                    // </div>
+                    <SpineMachine finalNumber={currentNumber}></SpineMachine>
                 )}
 
                 {/* {hasWon ? (
