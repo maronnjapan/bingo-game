@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Collapse } from './Collapse';
 import { pusherClient } from '@/lib/pusher';
+import { SpineMachine } from '../../_components/SpineMachine';
 
 export interface BingoCell {
     number: number;
@@ -74,7 +75,9 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
 
         // 新しい番号のリスニング
         numbersChannel.bind('new-number', (data: { number: number }) => {
-            setNumbers(prev => Array.from(new Set([...prev, data.number])));
+            setTimeout(() => {
+                setNumbers(prev => Array.from(new Set([...prev, data.number])));
+            }, 3500);
             setCurrentNumber(data.number);
             setDrawnNumbers(prev => [...prev, data.number]);
         });
@@ -145,9 +148,10 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 <h1 className="text-2xl text-black font-bold">ビンゴ管理画面</h1>
 
                 {currentNumber && (
-                    <div className="text-4xl font-bold text-blue-600">
-                        現在の番号: {currentNumber}
-                    </div>
+                    // <div className="text-4xl font-bold text-blue-600">
+                    //     現在の番号: {currentNumber}
+                    // </div>
+                    <SpineMachine finalNumber={currentNumber}></SpineMachine>
                 )}
 
                 {/* <button
