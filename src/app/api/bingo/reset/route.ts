@@ -1,9 +1,7 @@
 import { pusherServer } from '@/lib/pusher';
-import { players } from '@/utils/players';
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import * as fs from 'fs'
-const publicDirectory = path.join(process.cwd(), 'public')
+import { db } from '@/lib/db';
+
 export async function POST(request: NextRequest) {
     try {
         const { gameId } = await request.json();
@@ -15,12 +13,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const filePath = `${publicDirectory}/${gameId}/data.json`
-        const isExist = fs.existsSync(filePath)
-
-        if (isExist) {
-            fs.writeFileSync(filePath, JSON.stringify({}))
-        }
+        await db.delete(gameId)
 
         // 複数のチャンネルにリセット通知
         await Promise.all([

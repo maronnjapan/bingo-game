@@ -140,9 +140,9 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         const fetchInitialNumber = async () => {
             try {
                 const response = await fetch(`/api/bingo?gameId=${gameId}`);
-                const data: { fileData: { [gameId in string]: string[] } } = await response.json();
+                const data: { fileData: string[] } = await response.json();
                 console.log(data.fileData)
-                setNumbers(data.fileData[`${gameId}`].map(num => Number(num)));
+                setNumbers(data.fileData.map(num => Number(num)));
             } catch (error) {
                 console.error('Error fetching players:', error);
             }

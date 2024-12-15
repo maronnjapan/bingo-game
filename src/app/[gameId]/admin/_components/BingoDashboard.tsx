@@ -19,6 +19,8 @@ type Player = {
 
 export type BingoCard = BingoCell[][];
 
+
+const defaultValues = [62, 1, 16, 54, 38, 5, 7, 13, 8];
 export function BingoDashboard({ gameId }: { gameId: string }) {
     const [bingoPlayers, setBingoPlayers] = useState<{ id: string, name: string }[]>([]);
     const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
@@ -31,8 +33,8 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
         const fetchInitialNumber = async () => {
             try {
                 const response = await fetch(`/api/bingo?gameId=${gameId}`);
-                const data: { fileData: { [gameId in string]: string[] } } = await response.json();
-                setNumbers(data.fileData[`${gameId}`].map(num => Number(num)));
+                const data: { fileData: string[] } = await response.json();
+                setNumbers(data.fileData.map(num => Number(num)));
             } catch (error) {
                 console.error('Error fetching players:', error);
             }
@@ -152,10 +154,19 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                     onClick={() => {
                         announceNumber()
                     }}
-                    disabled={numbers.length >= 75}
+                    disabled={numbers.length >= 75 || numbers.length < defaultValues.length}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     番号を出す
+                </button>
+                <button
+                    onClick={async () => {
+                        announceNumber(defaultValues[numbers.length])
+                    }}
+                    disabled={numbers.length >= defaultValues.length}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    マッチポンプ番号を出す
                 </button>
                 <button
                     onClick={async () => {
@@ -169,12 +180,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 >
                     リセット
                 </button>
-                <div className='text-black'>
-                    <p>ビンゴした人</p>
-                    <ul>
-                        {bingoPlayers.map(bp => <li>{bp.name}さん</li>)}
-                    </ul>
-                </div>
+
 
                 <div className="mt-4">
                     <h2 className="text-xl mb-2 text-black">出た番号一覧:</h2>
@@ -187,45 +193,6 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                     </div>
                 </div>
             </div>
-            <div>
-                <h2 className="text-xl mb-4 text-black">参加者一覧</h2>
-                <input className='w-full border my-2 p-2  bg-slate-100 text-black' onChange={(event) => { setShowName(event.target.value) }} placeholder='表示する人'></input>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...players.filter(player => showName.length > 0 ? player.name.includes(showName) : true).filter(player => player.hasReach), ...players.filter(player => showName.length > 0 ? player.name.includes(showName) : true).filter(player => !player.hasReach)].map(player => (
-
-                        <Collapse title={<p className="text-lg font-semibold text-black">{player.name}{player.hasWon && (
-                            <span className="text-yellow-600 font-bold">
-                                ビンゴ!
-                            </span>
-                        )}{player.hasReach && (
-                            <span className="text-blue-600 font-bold">
-                                リーチ
-                            </span>
-                        )}</p>} hasWon={player.hasWon} hasReach={player.hasReach}>
-                            {/* プレイヤーのビンゴカード */}
-
-                            {player.card.map((row, rowIndex) =>
-                                row.map((cell, colIndex) => (
-                                    <div
-                                        key={`${rowIndex}-${colIndex}`}
-                                        className={`
-                                                    aspect-square flex items-center justify-center
-                                                    text-sm border rounded cursor-pointer
-                                                    ${cell.isMarked ? 'bg-blue-500 text-white' : 'bg-white'}
-                                                    ${drawnNumbers.includes(cell.number) ? 'border-red-500 border-2' : 'border-gray-200 text-black'}
-                                                `}
-                                        onClick={() => { announceNumber(cell.number) }}
-                                    >
-                                        {cell.number}
-                                    </div>
-                                ))
-                            )}
-
-                        </Collapse>
-
-                    ))}
-                </div>
-            </div>
-        </div >
+        </div>
     );
 }
