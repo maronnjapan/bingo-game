@@ -170,7 +170,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 </button> */}
                 <button
                     onClick={async () => {
-                        announceNumber(numbers.length < defaultValues.length ? numbers.length : undefined)
+                        announceNumber(numbers.length < defaultValues.length ? defaultValues[numbers.length] : undefined)
                     }}
                     disabled={numbers.length >= 75}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
