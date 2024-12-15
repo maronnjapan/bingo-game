@@ -28,6 +28,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
     const [numbers, setNumbers] = useState<number[]>([]);
     const [currentNumber, setCurrentNumber] = useState<number | null>(null);
     const [isNotificationError, setIsNotificationError] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
 
 
     useEffect(() => {
@@ -101,11 +102,18 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
     };
 
     const notificationError = async () => {
-        await fetch('/api/bingo/error', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gameId })
-        })
+        try {
+            setIsLoading(true)
+            await fetch('/api/bingo/error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameId })
+            })
+        } finally {
+            setTimeout(() => {
+                setIsLoading(false)
+            }, 2000);
+        }
     }
 
     const announceNumber = async (targetNumber?: number): Promise<void> => {
@@ -113,6 +121,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
         if (!number) return;
 
         try {
+            setIsLoading(true)
             await fetch('/api/bingo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -120,11 +129,16 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
             });
             setTimeout(() => {
                 setNumbers(prev => Array.from(new Set([...prev, number])));
+                setIsLoading(false)
             }, 3500);
             setCurrentNumber(number);
             setDrawnNumbers(prev => [...prev, number]);
         } catch (error) {
             console.error('Error announcing number:', error);
+        } finally {
+            setTimeout(() => {
+                setIsLoading(false)
+            }, 3500);
         }
     };
 
@@ -181,7 +195,7 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                         }
                         await announceNumber(numbers.length < defaultValues.length ? defaultValues[numbers.length] : undefined)
                     }}
-                    disabled={numbers.length >= 75}
+                    disabled={numbers.length >= 75 || isLoading}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     番号を出す
