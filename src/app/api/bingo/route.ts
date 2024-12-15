@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     try {
         const { number, gameId } = await request.json();
 
-        if (typeof number !== 'number' || number < 1 || number > 75) {
+        if (typeof number !== 'number' || number < 1 || number > 75 || !gameId) {
             return NextResponse.json(
                 { error: 'Invalid number' },
                 { status: 400 }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         }
 
         await pusherServer.trigger(
-            'bingo-numbers',
+            `bingo-game-${gameId}`,
             'new-number',
             {
                 number,

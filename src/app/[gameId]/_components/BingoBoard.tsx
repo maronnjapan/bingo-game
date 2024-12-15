@@ -4,6 +4,7 @@ import { BingoCard, BingoCell } from '../admin/_components/BingoDashboard';
 import { PlayerInfo } from '@/app/api/bingo/players/route';
 import { pusherClient } from '@/lib/pusher';
 import { SpineMachine } from './SpineMachine';
+import { ErrorScreen } from '@/components/ErrorSereen';
 const generateCard = (): BingoCard => {
     // 各列の数字の範囲を定義
     const ranges = [
@@ -48,6 +49,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
     const [player, setPlayer] = useState<{ id: string, name?: string, hasBingo: boolean }>({ id: Math.random().toString(32).substring(2), name: undefined, hasBingo: false });
     const [isNameEntered, setIsNameEntered] = useState<boolean>(false);
     const [hasWon, setHasWon] = useState<boolean>(false);
+    const [isShowError, setIsShowError] = useState(false)
 
 
     // const handleNameSubmit = (e: React.FormEvent) => {
@@ -112,10 +114,13 @@ export function BingoBoard({ gameId }: { gameId: string }) {
 
     useEffect(() => {
         const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);
-        const numbersChannel = pusherClient.subscribe('bingo-numbers');
+        gameChannel.bind('bingo-error', () => {
+            setIsShowError(true)
+        })
 
         // 新しい番号のリスニング
-        numbersChannel.bind('new-number', (data: { number: number }) => {
+        gameChannel.bind('new-number', (data: { number: number }) => {
+            setIsShowError(false)
             setCurrentNumber(data.number)
             setTimeout(() => {
                 setNumbers(prev => [...prev, data.number]);
@@ -126,6 +131,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
 
         // ゲームリセットのリスニング
         gameChannel.bind('game-reset', () => {
+            setIsShowError(false)
             setNumbers([]);
             setBingoCard(generateCard());
             setCurrentNumber(null);
@@ -135,9 +141,7 @@ export function BingoBoard({ gameId }: { gameId: string }) {
         // コンポーネントのクリーンアップ
         return () => {
             gameChannel.unbind_all();
-            numbersChannel.unbind_all();
             pusherClient.unsubscribe(`bingo-game-${gameId}`);
-            pusherClient.unsubscribe('bingo-numbers');
         };
     }, [gameId, isNameEntered, player]);
 
@@ -157,18 +161,19 @@ export function BingoBoard({ gameId }: { gameId: string }) {
     }, [])
 
     return (
-        <div className="max-w-xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
-            <div className="text-center space-y-6">
-                <h1 className="text-2xl font-bold text-black">ビンゴゲーム</h1>
+        <>
+            {isShowError ? <ErrorScreen></ErrorScreen> : <div className="max-w-xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
+                <div className="text-center space-y-6">
+                    <h1 className="text-2xl font-bold text-black">ビンゴゲーム</h1>
 
-                {currentNumber && (
-                    // <div className="text-4xl font-bold text-blue-600">
-                    //     現在の番号: {currentNumber}
-                    // </div>
-                    <SpineMachine finalNumber={currentNumber}></SpineMachine>
-                )}
+                    {currentNumber && (
+                        // <div className="text-4xl font-bold text-blue-600">
+                        //     現在の番号: {currentNumber}
+                        // </div>
+                        <SpineMachine finalNumber={currentNumber}></SpineMachine>
+                    )}
 
-                {/* {hasWon ? (
+                    {/* {hasWon ? (
                             <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg">
                                 ビンゴ達成！
                             </div>
@@ -192,18 +197,19 @@ transition-colors duration-200
                         </div>} */}
 
 
-                <div className="mt-4">
-                    <h2 className="text-xl mb-2 text-black">出た番号一覧:</h2>
-                    <div className="grid grid-cols-10 gap-1">
-                        {numbers.map((num, index) => (
-                            <div key={index} className="bg-gray-100 p-1 text-center rounded text-black">
-                                {num}
-                            </div>
-                        ))}
+                    <div className="mt-4">
+                        <h2 className="text-xl mb-2 text-black">出た番号一覧:</h2>
+                        <div className="grid grid-cols-10 gap-1">
+                            {numbers.map((num, index) => (
+                                <div key={index} className="bg-gray-100 p-1 text-center rounded text-black">
+                                    {num}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div>}
+        </>
     );
 }
 

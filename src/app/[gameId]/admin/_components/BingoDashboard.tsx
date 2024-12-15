@@ -27,8 +27,8 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
     const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
     const [numbers, setNumbers] = useState<number[]>([]);
     const [currentNumber, setCurrentNumber] = useState<number | null>(null);
-    const [players, setPlayers] = useState<Player[]>([]);
-    const [showName, setShowName] = useState('')
+    const [isNotificationError, setIsNotificationError] = useState(true)
+
 
     useEffect(() => {
         const fetchInitialNumber = async () => {
@@ -44,43 +44,34 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
         fetchInitialNumber();
     }, [])
     useEffect(() => {
-        // // 初期プレイヤーデータの取得
-        // const fetchInitialPlayers = async () => {
-        //     try {
-        //         const response = await fetch(`/api/bingo/players?gameId=${gameId}`);
-        //         const data = await response.json();
-        //         setPlayers(data.players);
-        //     } catch (error) {
-        //         console.error('Error fetching players:', error);
-        //     }
-        // };
-
-        // fetchInitialPlayers();
 
         // Pusherチャンネルの購読
         const gameChannel = pusherClient.subscribe(`bingo-game-${gameId}`);
-        const numbersChannel = pusherClient.subscribe('bingo-numbers');
 
         // ビンゴ達成通知のリスニング
-        gameChannel.bind('bingo-achieved', (data: { player: { id: string, name: string } }) => {
-            setBingoPlayers(prev => [...prev.filter(p => p.id !== data.player.id), data.player]);
-            // アラート表示
-            alert(`${data.player.name}さんがビンゴになりました！`);
-        });
+        // gameChannel.bind('bingo-achieved', (data: { player: { id: string, name: string } }) => {
+        //     setBingoPlayers(prev => [...prev.filter(p => p.id !== data.player.id), data.player]);
+        //     // アラート表示
+        //     alert(`${data.player.name}さんがビンゴになりました！`);
+        // });
 
-        // プレイヤー更新のリスニング
-        gameChannel.bind('players-updated', (data: { players: Player[] }) => {
-            setPlayers(data.players);
-        });
+        // // プレイヤー更新のリスニング
+        // gameChannel.bind('players-updated', (data: { players: Player[] }) => {
+        //     setPlayers(data.players);
+        // });
+
 
         // 新しい番号のリスニング
-        numbersChannel.bind('new-number', (data: { number: number }) => {
-            setTimeout(() => {
-                setNumbers(prev => Array.from(new Set([...prev, data.number])));
-            }, 3500);
-            setCurrentNumber(data.number);
-            setDrawnNumbers(prev => [...prev, data.number]);
-        });
+        // numbersChannel.bind('new-number', (data: { number: number }) => {
+        //     if (isShowError) {
+        //         setIsShowError(false)
+        //     }
+        //     setTimeout(() => {
+        //         setNumbers(prev => Array.from(new Set([...prev, data.number])));
+        //     }, 3500);
+        //     setCurrentNumber(data.number);
+        //     setDrawnNumbers(prev => [...prev, data.number]);
+        // });
 
         // ゲームリセットのリスニング
         gameChannel.bind('game-reset', () => {
@@ -88,14 +79,14 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
             setNumbers([]);
             setCurrentNumber(null);
             setBingoPlayers([]);
-            setPlayers([]);
+            // setPlayers([]);
         });
 
         return () => {
             gameChannel.unbind_all();
-            numbersChannel.unbind_all();
             pusherClient.unsubscribe(`bingo-game-${gameId}`);
             pusherClient.unsubscribe('bingo-numbers');
+            pusherClient.unsubscribe('bingo-error')
         };
     }, [gameId]);
 
@@ -109,6 +100,14 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
         return availableNumbers[randomIndex];
     };
 
+    const notificationError = async () => {
+        await fetch('/api/bingo/error', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId })
+        })
+    }
+
     const announceNumber = async (targetNumber?: number): Promise<void> => {
         const number = targetNumber ?? generateNumber();
         if (!number) return;
@@ -119,7 +118,9 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ number, gameId })
             });
-            setNumbers(prev => Array.from(new Set([...prev, number])));
+            setTimeout(() => {
+                setNumbers(prev => Array.from(new Set([...prev, number])));
+            }, 3500);
             setCurrentNumber(number);
             setDrawnNumbers(prev => [...prev, number]);
         } catch (error) {
@@ -174,7 +175,11 @@ export function BingoDashboard({ gameId }: { gameId: string }) {
                 </button> */}
                 <button
                     onClick={async () => {
-                        announceNumber(numbers.length < defaultValues.length ? defaultValues[numbers.length] : undefined)
+                        if (numbers.length === 11 && isNotificationError) {
+                            setIsNotificationError(false)
+                            return await notificationError()
+                        }
+                        await announceNumber(numbers.length < defaultValues.length ? defaultValues[numbers.length] : undefined)
                     }}
                     disabled={numbers.length >= 75}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
