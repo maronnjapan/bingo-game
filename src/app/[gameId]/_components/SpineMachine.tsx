@@ -164,29 +164,6 @@ export const SpineMachine = ({ finalNumber = 42, duration = 3000 }) => {
                     </div>
                 )}
             </div>
-
-            {/* <button
-                onClick={spin}
-                disabled={isSpinning}
-                className={`
-          mt-6
-          px-8
-          py-3
-          text-xl
-          font-bold
-          rounded-full
-          transition-all
-          transform
-          ${isSpinning
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-                    }
-          text-white
-          shadow-lg
-        `}
-            >
-                {isSpinning ? 'Spinning...' : 'SPIN!'}
-            </button> */}
         </div>
     );
 };

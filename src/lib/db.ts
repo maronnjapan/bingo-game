@@ -1,5 +1,4 @@
 import { Redis } from "@upstash/redis";
-import { get } from "http";
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
